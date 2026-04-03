@@ -10,14 +10,23 @@ import 'game_logic.dart';
 const Color kLcdBg = Color(0xFF94C89A);        // slightly warmer green for football pitch feel
 const Color kLcdBgBoost = Color(0xFFD4F080);   // Super Sonic flash
 const Color kLcdActive = Color(0xFF0A0F08);
-const Color kShell = Color(0xFF0054B4);         // Sonic Blue
-const Color kShellLight = Color(0xFF1A6FD4);
-const Color kShellShadow = Color(0xFF003080);
-const Color kAccentGold = Color(0xFFFFD700);
-const Color kAccentRed = Color(0xFFCC0000);
-const Color kBtnBase = Color(0xFFFFD700);       // Gold buttons
-const Color kBtnLight = Color(0xFFFFF176);
-const Color kBtnShadow = Color(0xFFC8A000);
+class ShellTheme {
+  final String name;
+  final Color shellLight;
+  final Color shellBase;
+  final Color shellShadow;
+  final Color btnBase;
+  final Color btnAccent;
+  const ShellTheme(this.name, this.shellLight, this.shellBase, this.shellShadow, this.btnBase, this.btnAccent);
+}
+
+const List<ShellTheme> kShellThemes = [
+  ShellTheme('Sonic Blue', Color(0xFF1A6FD4), Color(0xFF0054B4), Color(0xFF003080), Color(0xFFFFD700), Color(0xFFCC0000)),
+  ShellTheme('Tails Yellow', Color(0xFFFFD54F), Color(0xFFFFB300), Color(0xFFE65100), Color(0xFFD32F2F), Color(0xFFFFD700)),
+  ShellTheme('Knuckles Red', Color(0xFFEF5350), Color(0xFFD32F2F), Color(0xFFB71C1C), Color(0xFFFFD700), Color(0xFF1565C0)),
+  ShellTheme('Shadow Black', Color(0xFF5A5A5A), Color(0xFF2C2C2C), Color(0xFF0A0A0A), Color(0xFFFFD700), Color(0xFFCC0000)),
+  ShellTheme('Emerald Green', Color(0xFF66BB6A), Color(0xFF388E3C), Color(0xFF1B5E20), Color(0xFFCC0000), Color(0xFFFFD700)),
+];
 
 // ═══════════════════════════════════════════════
 // MAIN SCREEN
@@ -73,8 +82,52 @@ class ChefGameScreen extends StatelessWidget {
           return KeyEventResult.ignored;
         },
         child: Center(
-          child: SingleChildScrollView(child: _GameDevice()),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _ThemeBar(),
+                const SizedBox(height: 16),
+                _GameDevice(),
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _ThemeBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<GameLogic>(
+      builder: (_, logic, __) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(kShellThemes.length, (i) {
+          final theme = kShellThemes[i];
+          final isActive = logic.shellThemeIndex == i;
+          return GestureDetector(
+            onTap: () => logic.setShellTheme(i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              width: isActive ? 32 : 24,
+              height: isActive ? 32 : 24,
+              decoration: BoxDecoration(
+                color: theme.shellBase,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isActive ? Colors.white : Colors.white38,
+                  width: isActive ? 2.5 : 1.5,
+                ),
+                boxShadow: isActive
+                    ? [BoxShadow(color: theme.shellBase, blurRadius: 10, spreadRadius: 1)]
+                    : null,
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -87,13 +140,15 @@ class ChefGameScreen extends StatelessWidget {
 class _GameDevice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = kShellThemes[context.watch<GameLogic>().shellThemeIndex];
+    
     return Container(
       width: 360,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1A6FD4), Color(0xFF0054B4), Color(0xFF003080)],
+          colors: [theme.shellLight, theme.shellBase, theme.shellShadow],
         ),
         borderRadius: BorderRadius.circular(36),
         boxShadow: [
@@ -103,7 +158,7 @@ class _GameDevice extends StatelessWidget {
             offset: const Offset(0, 20),
           ),
           BoxShadow(
-            color: kShellLight.withOpacity(0.25),
+            color: theme.shellLight.withOpacity(0.25),
             blurRadius: 2,
             offset: const Offset(-1, -1),
           ),
@@ -133,6 +188,7 @@ class _GameDevice extends StatelessWidget {
 class _BrandHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = kShellThemes[context.watch<GameLogic>().shellThemeIndex];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -142,7 +198,7 @@ class _BrandHeader extends StatelessWidget {
             Text(
               'GAME & WATCH®',
               style: TextStyle(
-                color: kAccentGold,
+                color: theme.btnBase,
                 fontSize: 9,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 2.5,
@@ -163,15 +219,15 @@ class _BrandHeader extends StatelessWidget {
           builder: (_, logic, __) => Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: kAccentGold.withOpacity(0.15),
+              color: theme.btnBase.withOpacity(0.15),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: kAccentGold.withOpacity(0.6)),
+              border: Border.all(color: theme.btnBase.withOpacity(0.6)),
             ),
             child: Text(
               logic.superSonicActive ? '⚡ BOOST' :
               (logic.mode == GameMode.a ? 'GAME-A' : 'GAME-B'),
               style: TextStyle(
-                color: logic.superSonicActive ? Colors.yellowAccent : kAccentGold,
+                color: logic.superSonicActive ? Colors.yellowAccent : theme.btnBase,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
@@ -584,12 +640,14 @@ class _DPad extends StatelessWidget {
           children: [
             NeumorphicButton(
               size: 44,
+              baseColor: kShellThemes[context.watch<GameLogic>().shellThemeIndex].btnBase,
               onPressed: () => context.read<GameLogic>().moveSonic(-1),
               child: const Icon(Icons.chevron_left, color: Colors.black87, size: 22),
             ),
             const SizedBox(width: 6),
             NeumorphicButton(
               size: 44,
+              baseColor: kShellThemes[context.watch<GameLogic>().shellThemeIndex].btnBase,
               onPressed: () => context.read<GameLogic>().moveSonic(1),
               child: const Icon(Icons.chevron_right, color: Colors.black87, size: 22),
             ),
@@ -640,9 +698,10 @@ class _ModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = kShellThemes[context.watch<GameLogic>().shellThemeIndex];
     return NeumorphicButton(
       size: 36,
-      baseColor: active ? kAccentRed : kBtnBase,
+      baseColor: active ? theme.btnAccent : theme.btnBase,
       onPressed: onPressed,
       child: Text(
         label,
@@ -664,7 +723,7 @@ class _ActionCluster extends StatelessWidget {
         children: [
           NeumorphicButton(
             size: 48,
-            baseColor: kAccentRed,
+            baseColor: kShellThemes[logic.shellThemeIndex].btnAccent,
             onPressed: () {
               if (logic.phase == GamePhase.menu) logic.startGame(logic.mode);
               else if (logic.phase == GamePhase.gameOver) logic.goToMenu();
@@ -685,18 +744,19 @@ class _SmallButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = kShellThemes[context.watch<GameLogic>().shellThemeIndex];
     return GestureDetector(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: kShellShadow,
+          color: theme.shellShadow,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: kAccentGold.withOpacity(0.4)),
+          border: Border.all(color: theme.btnBase.withOpacity(0.4)),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: kAccentGold.withOpacity(0.7),
+            color: theme.btnBase.withOpacity(0.7),
             fontSize: 8,
             fontWeight: FontWeight.bold,
             letterSpacing: 2,
@@ -714,6 +774,7 @@ class _SmallButton extends StatelessWidget {
 class _MenuOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = kShellThemes[context.watch<GameLogic>().shellThemeIndex];
     return Container(
       decoration: BoxDecoration(
         color: kLcdBg.withOpacity(0.88),
@@ -728,7 +789,7 @@ class _MenuOverlay extends StatelessWidget {
             Text(
               'SONIC SOCCER',
               style: TextStyle(
-                color: kShell,
+                color: theme.shellBase,
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2,
@@ -754,6 +815,7 @@ class _MenuOverlay extends StatelessWidget {
 class _GameOverOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = kShellThemes[context.watch<GameLogic>().shellThemeIndex];
     return Container(
       decoration: BoxDecoration(
         color: kLcdBg.withOpacity(0.92),
@@ -767,7 +829,7 @@ class _GameOverOverlay extends StatelessWidget {
               Text(
                 'GOAL!!',
                 style: TextStyle(
-                  color: kAccentRed,
+                  color: theme.btnAccent,
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 3,
@@ -814,7 +876,7 @@ class NeumorphicButton extends StatefulWidget {
     required this.child,
     this.onPressed,
     this.size = 48,
-    this.baseColor = kBtnBase,
+    this.baseColor = const Color(0xFFFFD700),
   });
 
   @override

@@ -78,6 +78,13 @@ class GameLogic extends ChangeNotifier {
   bool catActive = false;
   int catColumn = 0;
 
+  // Shell Theme
+  int shellThemeIndex = 0;
+  void setShellTheme(int index) {
+    shellThemeIndex = index;
+    notifyListeners();
+  }
+
   Timer? _gameTimer;
   int _idCounter = 0;
   int _spawnCooldown = 0;
