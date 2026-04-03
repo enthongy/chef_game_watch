@@ -18,7 +18,7 @@ class GameWatchApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Game & Watch: Chef',
+      title: 'Game & Watch: Sonic Soccer',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,

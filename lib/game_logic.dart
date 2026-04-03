@@ -16,77 +16,64 @@ class GridPos {
   int get hashCode => Object.hash(x, y);
 }
 
-const int kPeakIndex = 8;
-const int kCatHoldTicks = 5; // increased from 3 — pause is more obvious to player
+const int kCatHoldTicks = 5;
 
-List<GridPos> buildArcPath(int col) {
-  return [
-    GridPos(col, 8), GridPos(col, 7), GridPos(col, 6), GridPos(col, 5),
-    GridPos(col, 4), GridPos(col, 3), GridPos(col, 2), GridPos(col, 1),
-    GridPos(col, 0), // peak = index 8
-    GridPos(col, 1), GridPos(col, 2), GridPos(col, 3), GridPos(col, 4),
-    GridPos(col, 5), GridPos(col, 6), GridPos(col, 7), GridPos(col, 8),
-  ];
-}
+// 9-step straight vertical drop per column.
+List<GridPos> buildDropPath(int col) => [
+      GridPos(col, 0),
+      GridPos(col, 1),
+      GridPos(col, 2),
+      GridPos(col, 3),
+      GridPos(col, 4),
+      GridPos(col, 5),
+      GridPos(col, 6),
+      GridPos(col, 7),
+      GridPos(col, 8), // index 8 = SAVE / GOAL row
+    ];
 
-final List<GridPos> allFoodGhostPositions = [
+final List<GridPos> allBallGhostPositions = [
   for (int col = 0; col < 4; col++)
     for (int row = 0; row < 9; row++) GridPos(col, row),
 ];
 
-class FoodItem {
+class SoccerBall {
   final int id;
   int column;
   List<GridPos> path;
-
   int pathIndex = 0;
-  bool heldByCat = false;
-  int catHoldRemaining = 0;
 
-  FoodItem(this.id, this.column) : path = buildArcPath(column);
+  SoccerBall(this.id, this.column) : path = buildDropPath(column);
 
   GridPos get position => path[pathIndex];
-  bool get atCatchPoint => pathIndex == path.length - 1;
-  bool get atPeak => pathIndex == kPeakIndex;
+  bool get atSavePoint => pathIndex == path.length - 1; // index 8
 
-  bool tick() {
-    if (heldByCat) {
-      if (catHoldRemaining > 0) {
-        catHoldRemaining--;
-        if (catHoldRemaining == 0) heldByCat = false;
-      }
-      return false;
-    }
-    if (pathIndex < path.length - 1) {
-      pathIndex++;
-      return true;
-    }
-    return false;
-  }
-
-  void applyCatHold() {
-    if (!heldByCat) {
-      heldByCat = true;
-      catHoldRemaining = kCatHoldTicks;
-    }
+  void tick() {
+    if (pathIndex < path.length - 1) pathIndex++;
   }
 }
 
 class GameLogic extends ChangeNotifier {
   static const int maxLives = 4;
   static const List<int> bonusRestoreScores = [200, 500];
-
-  /// Grace period: only 1 food item for first 3 ticks after game start.
   static const int kGracePeriodTicks = 3;
+  static const int kSuperSonicScore = 50;  // trigger every 50 pts
+  static const int kSuperSonicDuration = 5; // seconds
 
   GameMode mode = GameMode.a;
   GamePhase phase = GamePhase.menu;
-  int chefPosition = 1; // 0..3
-  List<FoodItem> foodItems = [];
+
+  int sonicPosition = 1; // 0..3
+  List<SoccerBall> balls = [];
   int score = 0;
   int lives = maxLives;
   int tickCounter = 0;
 
+  // Super Sonic state
+  bool superSonicActive = false;
+  int _superSonicTicksRemaining = 0;
+  int _lastSuperSonicTrigger = -1;
+
+  // Cat
   bool catActive = false;
   int catColumn = 0;
 
@@ -98,24 +85,24 @@ class GameLogic extends ChangeNotifier {
 
   GameLogic();
 
-  /// Score-based cap on concurrent food items on screen.
-  int get _effectiveMaxFoodItems {
-    if (tickCounter <= kGracePeriodTicks) return 1; // grace period
+  int get maxBalls => mode == GameMode.a ? 3 : 4;
+
+  int get _effectiveMaxBalls {
+    if (tickCounter <= kGracePeriodTicks) return 1;
     if (score < 10) return 1;
     if (score < 30) return 2;
-    return mode == GameMode.a ? 3 : 4; // full Game A / B capacity
+    return maxBalls;
   }
 
-  // Keep for ghost-layer painters that need the absolute max.
-  int get maxFoodItems => mode == GameMode.a ? 3 : 4;
-
   Duration get _tickDuration {
-    // Game A: 650ms → 320ms floor, ramps every 20 pts
-    // Game B: 500ms → 280ms floor, ramps every 20 pts
-    final int baseMs = mode == GameMode.a ? 650 : 500;
+    final int baseMs = mode == GameMode.a ? 600 : 450;
     final int reduction = (score ~/ 20) * 8;
-    final int minMs = mode == GameMode.a ? 320 : 280;
-    return Duration(milliseconds: max(minMs, baseMs - reduction));
+    final int minMs = mode == GameMode.a ? 300 : 260;
+    final int raw = max(minMs, baseMs - reduction);
+    // Super Sonic: ticks happen at half the normal interval (twice the speed).
+    return superSonicActive
+        ? Duration(milliseconds: raw ~/ 2)
+        : Duration(milliseconds: raw);
   }
 
   String get formattedScore => score.toString().padLeft(4, '0');
@@ -126,21 +113,24 @@ class GameLogic extends ChangeNotifier {
     phase = GamePhase.playing;
     score = 0;
     lives = maxLives;
-    chefPosition = 1;
-    foodItems = []; // start empty — _trySpawn handles everything
+    sonicPosition = 1;
+    balls = [];
     tickCounter = 0;
     catActive = false;
-    _spawnCooldown = 0; // first item spawns almost immediately
+    superSonicActive = false;
+    _superSonicTicksRemaining = 0;
+    _lastSuperSonicTrigger = -1;
+    _spawnCooldown = 0;
     _lastSpeedScore = -1;
     _startTimer();
     notifyListeners();
   }
 
-  void moveChef(int delta) {
+  void moveSonic(int delta) {
     if (phase != GamePhase.playing) return;
-    final next = (chefPosition + delta).clamp(0, 3);
-    if (next != chefPosition) {
-      chefPosition = next;
+    final next = (sonicPosition + delta).clamp(0, 3);
+    if (next != sonicPosition) {
+      sonicPosition = next;
       AudioService.instance.playMove();
       notifyListeners();
     }
@@ -149,9 +139,10 @@ class GameLogic extends ChangeNotifier {
   void goToMenu() {
     _gameTimer?.cancel();
     phase = GamePhase.menu;
-    foodItems = [];
+    balls = [];
     score = 0;
     lives = maxLives;
+    superSonicActive = false;
     notifyListeners();
   }
 
@@ -164,30 +155,37 @@ class GameLogic extends ChangeNotifier {
     if (phase != GamePhase.playing) return;
     tickCounter++;
 
-    for (final food in foodItems) food.tick();
-
-    final List<FoodItem> caught = [];
-    final List<FoodItem> missed = [];
-
-    for (final food in foodItems) {
-      if (food.atCatchPoint) {
-        if (chefPosition == food.column) caught.add(food);
-        else missed.add(food);
+    // --- Super Sonic countdown ---
+    if (superSonicActive) {
+      _superSonicTicksRemaining--;
+      if (_superSonicTicksRemaining <= 0) {
+        superSonicActive = false;
+        _startTimer(); // restore normal tick speed
       }
     }
 
-    // Caught: rebound immediately from index 0 on a new random track.
-    for (final c in caught) {
-      _onCatch();
-      c.column = _rng.nextInt(4);
-      c.pathIndex = 0;
-      c.path = buildArcPath(c.column);
+    for (final ball in balls) ball.tick();
+
+    final List<SoccerBall> saved = [];
+    final List<SoccerBall> goaled = [];
+
+    for (final ball in balls) {
+      if (ball.atSavePoint) {
+        if (sonicPosition == ball.column) saved.add(ball);
+        else goaled.add(ball);
+      }
     }
 
-    // Missed: lose a life and remove the item (it will be re-spawned later).
-    if (missed.isNotEmpty) {
-      for (final _ in missed) _onMiss();
-      foodItems.removeWhere((f) => missed.contains(f));
+    // Saved balls disappear (kicked away) — they get re-spawned naturally.
+    for (final s in saved) {
+      _onSave();
+      balls.remove(s);
+    }
+
+    // Goaled balls: Miss, also removed and re-spawned.
+    if (goaled.isNotEmpty) {
+      for (final _ in goaled) _onGoal();
+      balls.removeWhere((b) => goaled.contains(b));
     }
 
     if (lives <= 0) {
@@ -198,31 +196,45 @@ class GameLogic extends ChangeNotifier {
       return;
     }
 
-    // Speed tier upgrade check.
+    // Speed tier upgrade.
     final int speedTier = score ~/ 20;
     if (speedTier != (_lastSpeedScore ~/ 20)) {
       _lastSpeedScore = score;
       _startTimer();
     }
 
+    _checkSuperSonic();
     _trySpawn();
     _updateCat();
     notifyListeners();
   }
 
-  void _onCatch() {
+  void _onSave() {
     score++;
     if (bonusRestoreScores.contains(score)) {
       lives = maxLives;
       AudioService.instance.playBonus();
     } else {
-      AudioService.instance.playCatch();
+      AudioService.instance.playCatch(); // Ring collect sound
     }
   }
 
-  void _onMiss() {
+  void _onGoal() {
     lives = max(0, lives - 1);
-    AudioService.instance.playMiss();
+    AudioService.instance.playMiss(); // Thud
+  }
+
+  void _checkSuperSonic() {
+    final int tier = score ~/ kSuperSonicScore;
+    if (tier > 0 && tier != _lastSuperSonicTrigger) {
+      _lastSuperSonicTrigger = tier;
+      superSonicActive = true;
+      // Ticks are faster now, so multiply duration in ticks proportionally.
+      // At half tick interval, 5 seconds ≈ 5000ms / (tickDuration/2) ticks.
+      final int fullTickMs = _tickDuration.inMilliseconds * 2;
+      _superSonicTicksRemaining = max(5, 5000 ~/ fullTickMs);
+      _startTimer(); // restart timer at boosted speed
+    }
   }
 
   void _trySpawn() {
@@ -230,46 +242,29 @@ class GameLogic extends ChangeNotifier {
       _spawnCooldown--;
       return;
     }
+    if (balls.length >= _effectiveMaxBalls) return;
 
-    // Respect the score-based effective cap (includes grace period).
-    if (foodItems.length >= _effectiveMaxFoodItems) return;
-
-    final occupied = foodItems.map((f) => f.column).toSet();
+    final occupied = balls.map((b) => b.column).toSet();
     final free = [0, 1, 2, 3].where((c) => !occupied.contains(c)).toList();
     if (free.isEmpty) return;
 
-    // Higher probability when the screen is empty.
-    final double chance = foodItems.isEmpty ? 0.90 : 0.55;
+    final double chance = balls.isEmpty ? 0.90 : 0.55;
     if (_rng.nextDouble() < chance) {
       final col = free[_rng.nextInt(free.length)];
-      foodItems.add(FoodItem(_idCounter++, col));
-      // Stagger: next item won't spawn for 8–10 ticks.
+      balls.add(SoccerBall(_idCounter++, col));
       _spawnCooldown = 8 + _rng.nextInt(3);
     }
   }
 
   void _updateCat() {
-    // Cat only appears after score > 20 (player needs to find their rhythm first).
-    if (score <= 20) {
-      catActive = false;
-      return;
-    }
-
+    if (score <= 20) { catActive = false; return; }
     if (!catActive) {
       if (_rng.nextDouble() < 0.015) {
         catActive = true;
         catColumn = _rng.nextBool() ? 0 : 3;
-        for (final food in foodItems) {
-          if (food.column == catColumn && food.atPeak) {
-            food.applyCatHold();
-            break;
-          }
-        }
       }
     } else {
-      if (_rng.nextDouble() < 0.08) {
-        catActive = false;
-      }
+      if (_rng.nextDouble() < 0.08) catActive = false;
     }
   }
 
