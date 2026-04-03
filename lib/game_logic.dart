@@ -97,8 +97,9 @@ class GameLogic extends ChangeNotifier {
 
   Duration get _tickDuration {
     final int baseMs = mode == GameMode.a ? 600 : 450;
-    final int reduction = (score ~/ 20) * 8;
-    final int minMs = mode == GameMode.a ? 300 : 260;
+    // Ramps up speed by decreasing tick duration by 12ms every 10 points
+    final int reduction = (score ~/ 10) * 12;
+    final int minMs = mode == GameMode.a ? 280 : 220;
     final int raw = max(minMs, baseMs - reduction);
     // Super Sonic: ticks happen at half the normal interval (twice the speed).
     return superSonicActive
@@ -257,7 +258,8 @@ class GameLogic extends ChangeNotifier {
     if (_rng.nextDouble() < chance) {
       final col = free[_rng.nextInt(free.length)];
       balls.add(SoccerBall(_idCounter++, col));
-      _spawnCooldown = 8 + _rng.nextInt(3);
+      // Stagger: next item won't spawn for 3-5 ticks (allows overlapping drops, but not simultaneous)
+      _spawnCooldown = 3 + _rng.nextInt(3);
     }
   }
 
