@@ -84,11 +84,15 @@ Uses **Web Audio API** (via `dart:js_interop`) and **Windows Kernel Beep API** (
 ```text
 lib/
 ├── main.dart                 # App entry — ChangeNotifierProvider root
-├── game_logic.dart           # GameLogic (ChangeNotifier), spawn mechanics
-├── sonic_soccer_screen.dart  # Full UI, Shell styling, rendering stack
-├── audio_service.dart        # Conditional export bridge (Native vs Web)
-├── audio_service_stub.dart   # Web-compatible Audio Synthesizer (dart:js_interop)
-└── audio_service_native.dart # Desktop-friendly kernel32.dll wrapper
+├── src/
+│   ├── logic/
+│   │   └── game_logic.dart           # GameLogic (ChangeNotifier), spawn mechanics
+│   ├── ui/
+│   │   └── sonic_soccer_screen.dart  # Full UI, Shell styling, rendering stack
+│   └── audio/
+│       ├── audio_service.dart        # Conditional export bridge (Native vs Web)
+│       ├── audio_service_stub.dart   # Web-compatible Audio Synthesizer (dart:js_interop)
+│       └── audio_service_native.dart # Desktop-friendly kernel32.dll wrapper
 ```
 
 ---

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'audio_service.dart';
+import '../audio/audio_service.dart';
 
 enum GameMode { a, b }
 enum GamePhase { menu, playing, gameOver }

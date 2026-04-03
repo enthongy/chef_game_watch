@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'game_logic.dart';
-import 'sonic_soccer_screen.dart';
+import 'src/logic/game_logic.dart';
+import 'src/ui/sonic_soccer_screen.dart';
 
 void main() {
   runApp(

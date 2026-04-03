@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'game_logic.dart';
+import '../logic/game_logic.dart';
 
 // ═══════════════════════════════════════════════
 // SONIC SOCCER COLOUR PALETTE
