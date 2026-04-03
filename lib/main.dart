@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'game_logic.dart';
-import 'chef_game_screen.dart';
+import 'sonic_soccer_screen.dart';
 
 void main() {
   runApp(
@@ -25,7 +25,7 @@ class GameWatchApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0D0F14),
         fontFamily: 'monospace',
       ),
-      home: const ChefGameScreen(),
+      home: const SonicSoccerScreen(),
     );
   }
 }

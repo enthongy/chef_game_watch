@@ -1,5 +1,5 @@
-name: game_watch_chef
-description: "A Flutter recreation of Nintendo's 1981 Game & Watch: Chef — discrete arc physics, LCD ghost layer, native Windows Beep via FFI, neumorphic controls."
+name: sonic_soccer
+description: "A Flutter recreation of a 2003 Sega/McDonald's Sonic Soccer LCD handheld game — features 5 customizable device shells, native audio, and active/ghost rendering layers."
 publish_to: 'none'
 
 version: 1.0.0+1

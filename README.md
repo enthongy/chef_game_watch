@@ -1,8 +1,8 @@
-# 🍳 Game & Watch: Chef (Falling Objects Edition)
+# 👟 Sonic Soccer LCD (Flutter Recreation)
 
-A faithful Flutter recreation and mechanical twist on Nintendo's 1981 *Game & Watch: Chef* — the wide-screen LCD handheld — built entirely with pure Flutter (no game engines, no external assets).
+A faithful Flutter recreation of the classic **2003 Sega/McDonald's LCD Handheld games** — specifically a highly addictive custom *Sonic Soccer* edition! 
 
-> **Note:** This version features modernized mechanics by switching the game's classic parabolic "tossing" trajectory into a purely falling, reflex-oriented "drop down" mechanic.
+Built entirely with pure Flutter frontend architecture, this project meticulously replicates the physical aesthetic, visual constraints, synthetic audio, and responsive gameplay of early 2000s promotional fast-food handhelds.
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)
 ![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart)
@@ -13,78 +13,69 @@ A faithful Flutter recreation and mechanical twist on Nintendo's 1981 *Game & Wa
 
 ## 📺 Preview
 
-> The game renders a dark-navy handheld shell with a gold brushed-metal bezel around a `#94A88E` olive-green LCD panel — straight out of 1981.
+> The game renders a 3D-styled plastic console shell with a beautiful backlit glossy sticker background, matching physical hardware styles!
 
-**LCD Ghost Effect** — every possible sprite position is always visible at 5% opacity, just like a real LCD display. Active sprites render at 90% opacity in solid black.
+**True LCD Rendering** — The LCD segments behave identically to real physical hardware:
+- **Active Layer:** Solid black sprites mask out the background graphics behind them completely (`BlendMode.srcIn`).
+- **Ghost Layer:** All possible non-active LED positional states are drawn simultaneously at a faint 5% opacity.
+- **Background Wash:** The vibrant stadium pitch underneath is washed out with a 40% white tint overlay, simulating the glossy backlight glare found on physical liquid crystal displays.
 
 ---
 
 ## 🎮 Gameplay
 
-Help the chef catch the food falling from the top of the screen! Food items drop straight downward in discrete "ticks", increasing in speed as you score points.
+Defend against incoming soccer balls! Balls spawn at the top and drop vertically towards the bottom of the screen. Move Sonic horizontally to catch (save) the balls before they reach the goal line!
 
 ### ⌨️ Keyboard Controls
 
 | Key(s) | Action |
 |---|---|
-| `←` &nbsp;/&nbsp; `A` &nbsp;/&nbsp; `Z` | Move chef **left** |
-| `→` &nbsp;/&nbsp; `D` &nbsp;/&nbsp; `X` | Move chef **right** |
-| `1` | Start / restart **Game A** (3 items, normal speed) |
-| `2` | Start / restart **Game B** (4 items, fast speed) |
-| `Enter` &nbsp;/&nbsp; `Space` | **Confirm** — start game from menu; return to menu from Game Over |
+| `←` &nbsp;/&nbsp; `A` | Move Sonic **left** |
+| `→` &nbsp;/&nbsp; `D` | Move Sonic **right** |
+| `1` | Start / restart **Game A** (Max 3 balls, normal pace) |
+| `2` | Start / restart **Game B** (Max 4 balls, fast pace) |
+| `Enter` &nbsp;/&nbsp; `Space` | **Confirm** — start game from menu; return to menu |
 | `Esc` | **Menu** — abort current game and return to title |
 
 ### 🖱️ On-Screen Buttons
 
 | Button | Action |
 |---|---|
-| `‹` `›` | Move chef left / right (mouse or touch - instant `onTapDown` triggered!) |
+| `‹` `›` | Move left/right (instant `onTapDown` triggered for mobile/mouse) |
 | **GAME A** | Start Game A |
 | **GAME B** | Start Game B |
-| **START** (▶) | Return to menu after Game Over |
+| **START** | Start game or return to menu |
 
 ### Rules
-- Each caught pancake = **+1 point**
-- Miss a pancake = **−1 life** (4 lives total, shown as MISS diamonds)
-- At **200** and **500** points — all MISS markers clear (bonus lives)
-- Speed increases every **10 points**
+- Each save = **+1 point**.
+- Miss a ball = **−1 life** (4 lives total, shown as MISS diamonds in the corner).
+- At **200** and **500** points — all MISS markers clear (bonus lives).
+- The game speeds up smoothly as your score increases (drops 12ms tick duration every 10 points).
+
+### ⚡ Super Sonic Boost
+Every 50 points, the game enters a brief **Super Sonic Boost State**:
+- The screen flashes a luminous green/yellow!
+- Sonic's sprite turns sky blue and gold!
+- **Tick Speed Doubles** for 5 seconds — testing your reaction limits!
 
 ---
 
 ## ✨ Features
 
-### Physics
-- **Discrete drop physics** — food follows a predefined straight `List<GridPos>` path falling through 9 distinct grid spaces. Authentic LCD screen stutter mechanics.
-- **Game tick clock** — a single `Timer.periodic` drives everything; all objects subscribe to the same clock tick.
+### 🎨 5 Modular Shell Themes
+Inspired by the multi-colored McDonald's Happy Meal Sega line, you can dynamically hot-swap the color of your virtual device. Tap the circular swatches at the top of the interface:
+1. 🔵 **Sonic Blue** (Navy casing + Red buttons)
+2. 🟡 **Tails Yellow** (Bright Yellow casing + Red buttons)
+3. 🔴 **Knuckles Red** (Crimson casing + Blue buttons)
+4. ⚫ **Shadow Black** (Dark Slate casing + Red buttons)
+5. 🟢 **Emerald Green** (Forest Green casing + Red buttons)
 
-### Visuals
-- **LCD ghost layer** — `CustomPaint` renders all 27 possible food positions (3 cols × 9 rows) + 3 chef positions at `opacity: 0.05` at all times.
-- **Active sprite layer** — current state painted at `opacity: 0.90`.
-- **Brushed-metal bezel** — 5-stop gold `LinearGradient` wrapping the screen.
-- **Seven-segment score display** — segments A–G drawn as rounded `RRect`s; ghost segments at 7% opacity.
-- **Ultra-responsive Neumorphic buttons** — dual `BoxShadow` (light top-left / dark bottom-right) trigger instantaneous `onTapDown` movement commands with press animation (`scale: 0.95`, 80 ms).
-
-### Sound
-- **Web Audio Context API Synth** — Uses `dart:js_interop` (JS Interop) to bind to an injected HTML5 `<script>` element containing `window.playWebBeep`. This uses raw browser `AudioContext` and an `OscillatorNode` (`square` wave) to mimic Game & Watch piezos on the web!
-- **Native Windows Beep** — via `dart:ffi` → `kernel32.dll Beep()`, fired in a background `Isolate` so the UI never stutters holding the audio frequency loop on actual desktop PCs.
-- No audio MP3/WAV files, no external audio packages — 100% self-contained synthesized sounds!
-
-| Event | Sound |
-|---|---|
-| Catch | Two ascending blips (880 Hz → 1175 Hz) |
-| Miss | Descending buzz (300 Hz → 220 Hz) |
-| Game Over | Three descending tones |
-| Bonus (200/500 pts) | Four-note ascending fanfare |
-
-### Architecture
-```text
-ChangeNotifierProvider<GameLogic>
-└── ChefGameScreen
-    └── Stack
-        ├── _GhostLayerPainter   (CustomPaint — opacity 0.05)
-        ├── _ActiveLayerPainter  (CustomPaint — opacity 0.90)
-        └── Overlay              (Menu / Game Over card)
-```
+### 🔊 16-bit Synthesized Audio
+Uses **Web Audio API** (via `dart:js_interop`) and **Windows Kernel Beep API** (`kernel32.dll`) to generate native retro frequency beeps dynamically on the device. No `.mp3` files are used in this repository!
+- **Save:** Ascending ring collect (1760 Hz → 2093 Hz).
+- **Miss/Goal:** Disappointing low buzz (110 Hz).
+- **Movement:** Crisp zip tone (880 Hz).
+- **Super Sonic Fanfare:** Arpeggiated melody sequence.
 
 ---
 
@@ -93,13 +84,11 @@ ChangeNotifierProvider<GameLogic>
 ```text
 lib/
 ├── main.dart                 # App entry — ChangeNotifierProvider root
-├── game_logic.dart           # GameLogic (ChangeNotifier), FoodItem, GridPos,
-│                             #   vertical drop paths, tick logic, Game A/B modes
-├── chef_game_screen.dart     # Full UI: device shell, LCD layers, seven-segment
-│                             #   score, neumorphic controls, overlays
+├── game_logic.dart           # GameLogic (ChangeNotifier), spawn mechanics
+├── sonic_soccer_screen.dart  # Full UI, Shell styling, rendering stack
 ├── audio_service.dart        # Conditional export bridge (Native vs Web)
 ├── audio_service_stub.dart   # Web-compatible Audio Synthesizer (dart:js_interop)
-└── audio_service_native.dart # Desktop-friendly kernel32.dll FFI Beep wrapper
+└── audio_service_native.dart # Desktop-friendly kernel32.dll wrapper
 ```
 
 ---
@@ -108,72 +97,22 @@ lib/
 
 ### Prerequisites
 - Flutter SDK `≥ 3.0`
-- Configured to build locally to Windows, or deploy virtually to Vercel/Web.
+- Suitable for Windows Desktop compilation or Flutter Web.
 
 ### Web Deployment (Vercel)
 If you're looking to run this on **Vercel** with the `build.sh` script included in the codebase:
 1. Ensure your framework preset on Vercel is set to **Other**.
 2. Build command: `bash build.sh`
 3. Output Directory: `build/web`
-4. Install Command: Make this inherently block (e.g., `echo "skip"` or handled via `build.sh`).
-
----
-
-## 🛠 Technical Notes
-
-### Vertical Grid Path
-Each `FoodItem` falls over a **fixed 9-step `List<GridPos>`** dropping from index 0 straight to 8.
-
-```text
-index  0 → GridPos(col, 0)  SPAWN & STARTING POINT
-index  1 → GridPos(col, 1)
-index  2 → GridPos(col, 2)
-index  3 → GridPos(col, 3)
-index  4 → GridPos(col, 4)
-index  5 → GridPos(col, 5)
-index  6 → GridPos(col, 6)
-index  7 → GridPos(col, 7)
-index  8 → GridPos(col, 8)  CATCH POINT (last index)
-```
-
-> **Collision is checked at index 8 only.** If `chefPosition == food.column` at that single frame → catch is awarded. Any other frame or column → ignored resulting in a miss. This is intentional: it forces the player to *commit* to a position, not just hover blindly.
-
-*(Note: The retro cat element from the original game has been cleanly disabled via `#catActive = false` to preserve the visual flow of purely top-to-bottom gravity mechanics.)*
-
-### Speed Scaling
-```dart
-// Game A
-baseMs    = 480 
-reduction = (score ~/ 10) * 12
-minMs     = 180
-
-// Game B
-baseMs    = 350
-reduction = (score ~/ 10) * 12
-minMs     = 120
-
-duration  = max(minMs, baseMs - reduction)
-```
-
----
-
-## 📦 Dependencies
-
-| Package | Version | Purpose |
-|---|---|---|
-| `provider` | `^6.x` | State management (`ChangeNotifier`) |
-
-No audio packages. No game engines. No image assets.
+4. Install Command: Make this inherently block (e.g., `echo "skip"`).
 
 ---
 
 ## 🙏 Credits
 
-- Inspired by Nintendo's *Game & Watch: Chef* (1981, Wide Screen series)
-- Built as a Flutter architecture exercise showcasing pure Dart performance.
-
----
+- Inspired by the *Nintendo Game & Watch* series and the *2003 McDonald's Sega LCD toy collection*.
+- Built as an architectural UI/UX exercise.
 
 ## 📄 License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT — see LICENSE for details.

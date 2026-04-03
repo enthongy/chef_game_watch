@@ -32,8 +32,8 @@ const List<ShellTheme> kShellThemes = [
 // MAIN SCREEN
 // ═══════════════════════════════════════════════
 
-class ChefGameScreen extends StatelessWidget {
-  const ChefGameScreen({super.key});
+class SonicSoccerScreen extends StatelessWidget {
+  const SonicSoccerScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
