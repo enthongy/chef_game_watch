@@ -16,14 +16,14 @@ class GridPos {
   int get hashCode => Object.hash(x, y);
 }
 
-const int kPeakIndex = 8; 
-const int kCatHoldTicks = 3;
+const int kPeakIndex = 8;
+const int kCatHoldTicks = 5; // increased from 3 — pause is more obvious to player
 
 List<GridPos> buildArcPath(int col) {
   return [
     GridPos(col, 8), GridPos(col, 7), GridPos(col, 6), GridPos(col, 5),
     GridPos(col, 4), GridPos(col, 3), GridPos(col, 2), GridPos(col, 1),
-    GridPos(col, 0), // peak = 8
+    GridPos(col, 0), // peak = index 8
     GridPos(col, 1), GridPos(col, 2), GridPos(col, 3), GridPos(col, 4),
     GridPos(col, 5), GridPos(col, 6), GridPos(col, 7), GridPos(col, 8),
   ];
@@ -76,6 +76,9 @@ class GameLogic extends ChangeNotifier {
   static const int maxLives = 4;
   static const List<int> bonusRestoreScores = [200, 500];
 
+  /// Grace period: only 1 food item for first 3 ticks after game start.
+  static const int kGracePeriodTicks = 3;
+
   GameMode mode = GameMode.a;
   GamePhase phase = GamePhase.menu;
   int chefPosition = 1; // 0..3
@@ -95,14 +98,23 @@ class GameLogic extends ChangeNotifier {
 
   GameLogic();
 
+  /// Score-based cap on concurrent food items on screen.
+  int get _effectiveMaxFoodItems {
+    if (tickCounter <= kGracePeriodTicks) return 1; // grace period
+    if (score < 10) return 1;
+    if (score < 30) return 2;
+    return mode == GameMode.a ? 3 : 4; // full Game A / B capacity
+  }
+
+  // Keep for ghost-layer painters that need the absolute max.
   int get maxFoodItems => mode == GameMode.a ? 3 : 4;
 
   Duration get _tickDuration {
-    // Game A: 650ms base → floors at 250ms, drops 8ms per 10 pts
-    // Game B: 500ms base → floors at 250ms, drops 8ms per 10 pts
+    // Game A: 650ms → 320ms floor, ramps every 20 pts
+    // Game B: 500ms → 280ms floor, ramps every 20 pts
     final int baseMs = mode == GameMode.a ? 650 : 500;
-    final int reduction = (score ~/ 10) * 8;
-    const int minMs = 250; // hard floor — never faster than this
+    final int reduction = (score ~/ 20) * 8;
+    final int minMs = mode == GameMode.a ? 320 : 280;
     return Duration(milliseconds: max(minMs, baseMs - reduction));
   }
 
@@ -115,19 +127,10 @@ class GameLogic extends ChangeNotifier {
     score = 0;
     lives = maxLives;
     chefPosition = 1;
-    foodItems = [];
-    
-    int count = mode == GameMode.a ? 3 : 4;
-    int spacing = (17 ~/ count); // 17 path steps / items
-    for (int i = 0; i < count; i++) {
-        FoodItem f = FoodItem(_idCounter++, i % 4);
-        f.pathIndex = i * spacing; 
-        foodItems.add(f);
-    }
-    
+    foodItems = []; // start empty — _trySpawn handles everything
     tickCounter = 0;
     catActive = false;
-    _spawnCooldown = 0;
+    _spawnCooldown = 0; // first item spawns almost immediately
     _lastSpeedScore = -1;
     _startTimer();
     notifyListeners();
@@ -165,7 +168,7 @@ class GameLogic extends ChangeNotifier {
 
     final List<FoodItem> caught = [];
     final List<FoodItem> missed = [];
-    
+
     for (final food in foodItems) {
       if (food.atCatchPoint) {
         if (chefPosition == food.column) caught.add(food);
@@ -173,6 +176,7 @@ class GameLogic extends ChangeNotifier {
       }
     }
 
+    // Caught: rebound immediately from index 0 on a new random track.
     for (final c in caught) {
       _onCatch();
       c.column = _rng.nextInt(4);
@@ -180,8 +184,9 @@ class GameLogic extends ChangeNotifier {
       c.path = buildArcPath(c.column);
     }
 
+    // Missed: lose a life and remove the item (it will be re-spawned later).
     if (missed.isNotEmpty) {
-      for (final m in missed) _onMiss();
+      for (final _ in missed) _onMiss();
       foodItems.removeWhere((f) => missed.contains(f));
     }
 
@@ -193,8 +198,9 @@ class GameLogic extends ChangeNotifier {
       return;
     }
 
-    final int speedTier = score ~/ 10;
-    if (score != _lastSpeedScore && speedTier != (_lastSpeedScore ~/ 10)) {
+    // Speed tier upgrade check.
+    final int speedTier = score ~/ 20;
+    if (speedTier != (_lastSpeedScore ~/ 20)) {
       _lastSpeedScore = score;
       _startTimer();
     }
@@ -224,21 +230,31 @@ class GameLogic extends ChangeNotifier {
       _spawnCooldown--;
       return;
     }
-    if (foodItems.length >= maxFoodItems) return;
+
+    // Respect the score-based effective cap (includes grace period).
+    if (foodItems.length >= _effectiveMaxFoodItems) return;
 
     final occupied = foodItems.map((f) => f.column).toSet();
     final free = [0, 1, 2, 3].where((c) => !occupied.contains(c)).toList();
     if (free.isEmpty) return;
 
-    final double chance = foodItems.isEmpty ? 0.95 : 0.60;
+    // Higher probability when the screen is empty.
+    final double chance = foodItems.isEmpty ? 0.90 : 0.55;
     if (_rng.nextDouble() < chance) {
       final col = free[_rng.nextInt(free.length)];
       foodItems.add(FoodItem(_idCounter++, col));
-      _spawnCooldown = 2;
+      // Stagger: next item won't spawn for 8–10 ticks.
+      _spawnCooldown = 8 + _rng.nextInt(3);
     }
   }
 
   void _updateCat() {
+    // Cat only appears after score > 20 (player needs to find their rhythm first).
+    if (score <= 20) {
+      catActive = false;
+      return;
+    }
+
     if (!catActive) {
       if (_rng.nextDouble() < 0.015) {
         catActive = true;
