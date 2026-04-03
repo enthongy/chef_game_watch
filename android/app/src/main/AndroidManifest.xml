@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="game_watch_chef"
+        android:label="sonic_soccer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

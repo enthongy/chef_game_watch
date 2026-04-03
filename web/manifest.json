@@ -1,11 +1,11 @@
 {
-    "name": "game_watch_chef",
-    "short_name": "game_watch_chef",
+    "name": "sonic_soccer",
+    "short_name": "sonic_soccer",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Sonic Soccer LCD",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,4 +1,4 @@
-package com.example.game_watch_chef
+package com.example.sonic_soccer
 
 import io.flutter.embedding.android.FlutterActivity
 
