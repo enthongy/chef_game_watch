@@ -2,7 +2,6 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 
-// FFI type signatures
 typedef _BeepNative = Bool Function(Uint32 freq, Uint32 duration);
 typedef _BeepDart = bool Function(int freq, int duration);
 
@@ -12,8 +11,7 @@ Future<void> _beepAsync(int freq, int durationMs) async {
       final kernel32 = DynamicLibrary.open('kernel32.dll');
       final beep = kernel32.lookupFunction<_BeepNative, _BeepDart>('Beep');
       beep(freq, durationMs);
-    } catch (_) {
-    }
+    } catch (_) {}
   });
 }
 
@@ -27,16 +25,21 @@ class AudioService {
 
   Future<void> playCatch() async {
     if (!_enabled || !defaultTargetPlatform.isWindows) return;
-    _beepAsync(880, 55);
-    await Future.delayed(const Duration(milliseconds: 70));
-    _beepAsync(1175, 55);
+    _beepAsync(1046, 50);
+  }
+
+  Future<void> playMove() async {
+    if (!_enabled || !defaultTargetPlatform.isWindows) return;
+    _beepAsync(440, 30);
   }
 
   Future<void> playMiss() async {
     if (!_enabled || !defaultTargetPlatform.isWindows) return;
-    _beepAsync(300, 80);
-    await Future.delayed(const Duration(milliseconds: 90));
-    _beepAsync(220, 120);
+    // Slide approximation
+    for (int i = 0; i < 5; i++) {
+       _beepAsync(150 - (i * 10), 40);
+       await Future.delayed(const Duration(milliseconds: 40));
+    }
   }
 
   Future<void> playGameOver() async {

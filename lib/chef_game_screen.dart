@@ -100,7 +100,11 @@ class _GameDevice extends StatelessWidget {
     return Container(
       width: 340,
       decoration: BoxDecoration(
-        color: kShell,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFD4AF37), Color(0xFFF9E076), Color(0xFFD4AF37)],
+        ),
         borderRadius: BorderRadius.circular(36),
         boxShadow: [
           BoxShadow(
@@ -155,7 +159,7 @@ class _BrandHeader extends StatelessWidget {
               ),
             ),
             Text(
-              'CHEF',
+              'CHEF (GOLD)',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.9),
                 fontSize: 16,
@@ -331,14 +335,13 @@ class _GhostLayerPainter extends CustomPainter {
       ..color = kLcdActive.withOpacity(0.05)
       ..style = PaintingStyle.fill;
 
-    // Food ghosts
     for (final pos in allFoodGhostPositions) {
       final offset = _gridToCanvas(pos, size);
-      _drawFood(canvas, offset, paint);
+      _drawFood(canvas, offset, paint, atPeak: pos.y == 0);
     }
 
-    // Chef ghosts at all 3 positions (row below grid)
-    for (int col = 0; col < 3; col++) {
+    // Chef ghosts at all 4 positions (row below grid)
+    for (int col = 0; col < 4; col++) {
       final offset = _chefOffset(col, size);
       _drawChef(canvas, offset, paint);
     }
@@ -372,7 +375,7 @@ class _ActiveLayerPainter extends CustomPainter {
     // Draw food items
     for (final food in logic.foodItems) {
       final offset = _gridToCanvas(food.position, size);
-      _drawFood(canvas, offset, activePaint);
+      _drawFood(canvas, offset, activePaint, atPeak: food.atPeak);
     }
 
     // Draw chef
@@ -402,9 +405,9 @@ class _ActiveLayerPainter extends CustomPainter {
 const double _kTopPct    = 0.04;  // y=0 (peak)
 const double _kBottomPct = 0.86;  // y=8 (catch / chef)
 
-/// Maps a GridPos (x:0-2, y:0-8) to canvas pixel centre.
+/// Maps a GridPos (x:0-3, y:0-8) to canvas pixel centre.
 Offset _gridToCanvas(GridPos pos, Size size) {
-  final double cx = size.width * (pos.x * 2 + 1) / 6;
+  final double cx = size.width * (pos.x * 2 + 1) / 8;
   final double cy = size.height *
       (_kTopPct + (pos.y / 8) * (_kBottomPct - _kTopPct));
   return Offset(cx, cy);
@@ -413,27 +416,28 @@ Offset _gridToCanvas(GridPos pos, Size size) {
 /// Chef is fixed at the catch row (y=8 equivalent).
 Offset _chefOffset(int col, Size size) {
   return Offset(
-    size.width * (col * 2 + 1) / 6,
+    size.width * (col * 2 + 1) / 8,
     size.height * _kBottomPct,
   );
 }
 
 // ─── Sprite painters ─────────────────────────
 
-void _drawFood(Canvas canvas, Offset center, Paint paint) {
+void _drawFood(Canvas canvas, Offset center, Paint paint, {bool atPeak = false}) {
+  final double scale = atPeak ? 0.7 : 1.0;
   // Pancake: filled ellipse
   canvas.drawOval(
-    Rect.fromCenter(center: center, width: 16, height: 9),
+    Rect.fromCenter(center: center, width: 16 * scale, height: 9 * scale),
     paint,
   );
   // Stack line on top
   final linePaint = Paint()
     ..color = paint.color
     ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.2;
+    ..strokeWidth = 1.2 * scale;
   canvas.drawLine(
-    center + const Offset(-6, -2),
-    center + const Offset(6, -2),
+    center + Offset(-6 * scale, -2 * scale),
+    center + Offset(6 * scale, -2 * scale),
     linePaint,
   );
 }
