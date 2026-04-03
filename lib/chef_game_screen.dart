@@ -229,8 +229,8 @@ class _LcdScreen extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             color: logic.superSonicActive 
-                ? kLcdBgBoost.withOpacity(0.6) 
-                : Colors.transparent,
+                ? kLcdBgBoost.withOpacity(0.7) 
+                : const Color.fromRGBO(255, 255, 255, 0.4), // light overlay to make sprites pop
             child: Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
@@ -323,11 +323,15 @@ class _GameArea extends StatelessWidget {
             // ACTIVE LAYER - SONIC
             Align(
               alignment: Alignment(-0.75 + (logic.sonicPosition * 0.5), 0.70),
-              child: Image.asset(
-                'assets/sonic.png', 
-                width: 34, 
-                height: 34,
-                color: logic.superSonicActive ? Colors.yellow : kLcdActive.withOpacity(0.90)
+              child: Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()..scale(logic.sonicDirection.toDouble(), 1.0, 1.0),
+                child: Image.asset(
+                  'assets/sonic.png', 
+                  width: 34, 
+                  height: 34,
+                  color: logic.superSonicActive ? Colors.yellow : kLcdActive.withOpacity(0.90)
+                ),
               ),
             ),
 
@@ -635,7 +639,7 @@ class _ModeButton extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: active ? Colors.white : kAccentGold,
+          color: active ? Colors.white : Colors.black87,
           fontSize: 13,
           fontWeight: FontWeight.w900,
         ),

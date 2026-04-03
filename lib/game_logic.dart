@@ -63,6 +63,7 @@ class GameLogic extends ChangeNotifier {
   GamePhase phase = GamePhase.menu;
 
   int sonicPosition = 1; // 0..3
+  int sonicDirection = 1; // 1 (right) or -1 (left)
   List<SoccerBall> balls = [];
   int score = 0;
   int lives = maxLives;
@@ -128,10 +129,14 @@ class GameLogic extends ChangeNotifier {
 
   void moveSonic(int delta) {
     if (phase != GamePhase.playing) return;
+    sonicDirection = delta > 0 ? 1 : -1;
     final next = (sonicPosition + delta).clamp(0, 3);
     if (next != sonicPosition) {
       sonicPosition = next;
       AudioService.instance.playMove();
+      notifyListeners();
+    } else {
+      // Still notify so the flip happens even if at the edge
       notifyListeners();
     }
   }
