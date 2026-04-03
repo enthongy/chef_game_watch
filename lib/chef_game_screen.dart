@@ -325,7 +325,8 @@ class _GameArea extends StatelessWidget {
               alignment: Alignment(-0.75 + (logic.sonicPosition * 0.5), 0.70),
               child: Transform(
                 alignment: Alignment.center,
-                transform: Matrix4.identity()..scale(logic.sonicDirection.toDouble(), 1.0, 1.0),
+                // The AI generated Sonic asset faces left naturally, so we invert the flip factor
+                transform: Matrix4.identity()..scale(-logic.sonicDirection.toDouble(), 1.0, 1.0),
                 child: Image.asset(
                   'assets/sonic.png', 
                   width: 34, 
@@ -444,18 +445,25 @@ class _DiamondPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height / 2)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(0, size.height / 2)
+      ..close();
+
     final paint = Paint()
-      ..color = kLcdActive.withOpacity(active ? 0.90 : 0.06)
+      ..color = kLcdActive.withOpacity(active ? 0.90 : 0.12)
       ..style = PaintingStyle.fill;
-    canvas.drawPath(
-      Path()
-        ..moveTo(size.width / 2, 0)
-        ..lineTo(size.width, size.height / 2)
-        ..lineTo(size.width / 2, size.height)
-        ..lineTo(0, size.height / 2)
-        ..close(),
-      paint,
-    );
+    canvas.drawPath(path, paint);
+
+    if (!active) {
+      final strokePaint = Paint()
+        ..color = kLcdActive.withOpacity(0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+      canvas.drawPath(path, strokePaint);
+    }
   }
 
   @override
