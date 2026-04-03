@@ -40,29 +40,20 @@ class GridPos {
 // Each step is one game tick.
 // ─────────────────────────────────────────────
 
-const int kPeakIndex = 7; // index where cat can intercept
+const int kPeakIndex = 0; // top point where cat can intercept
 const int kCatHoldTicks = 2;
 
-// 16-step path across 9 grid rows (y: 0=peak, 8=catch zone).
-// Double the resolution vs the old 8-step path — each visual
-// jump is half the size, so movement looks continuous.
+// 9-step path dropping down vertically.
 List<GridPos> buildArcPath(int col) => [
-      GridPos(col, 7), //  0 – launch
-      GridPos(col, 6), //  1
-      GridPos(col, 5), //  2
-      GridPos(col, 4), //  3
-      GridPos(col, 3), //  4
-      GridPos(col, 2), //  5
-      GridPos(col, 1), //  6
-      GridPos(col, 0), //  7 – PEAK  ← cat holds here
-      GridPos(col, 1), //  8
-      GridPos(col, 2), //  9
-      GridPos(col, 3), // 10
-      GridPos(col, 4), // 11
-      GridPos(col, 5), // 12
-      GridPos(col, 6), // 13
-      GridPos(col, 7), // 14
-      GridPos(col, 8), // 15 – CATCH POINT (last index)
+      GridPos(col, 0), // 0 - spawn / peak
+      GridPos(col, 1),
+      GridPos(col, 2),
+      GridPos(col, 3),
+      GridPos(col, 4),
+      GridPos(col, 5),
+      GridPos(col, 6),
+      GridPos(col, 7),
+      GridPos(col, 8), // 8 - CATCH POINT (last index)
     ];
 
 /// Every unique position food can ever occupy (used by ghost layer).
@@ -161,11 +152,11 @@ class GameLogic extends ChangeNotifier {
   int get maxFoodItems => mode == GameMode.a ? 3 : 4;
 
   Duration get _tickDuration {
-    // Path now has 16 steps (was 8), so tick speed is halved
+    // Path now has 9 steps (vertically down), tick duration adjusted
     // to keep the same real-time catch pace.
-    final int baseMs = mode == GameMode.a ? 240 : 175;
-    final int reduction = (score ~/ 10) * 6;
-    final int minMs = mode == GameMode.a ? 90 : 60;
+    final int baseMs = mode == GameMode.a ? 480 : 350;
+    final int reduction = (score ~/ 10) * 12;
+    final int minMs = mode == GameMode.a ? 180 : 120;
     return Duration(milliseconds: max(minMs, baseMs - reduction));
   }
 
@@ -292,11 +283,11 @@ class GameLogic extends ChangeNotifier {
     final free = [0, 1, 2].where((c) => !occupied.contains(c)).toList();
     if (free.isEmpty) return;
 
-    final double chance = foodItems.isEmpty ? 0.80 : 0.40;
+    final double chance = foodItems.isEmpty ? 0.95 : 0.60;
     if (_rng.nextDouble() < chance) {
       final col = free[_rng.nextInt(free.length)];
       foodItems = [...foodItems, FoodItem(_idCounter++, col)];
-      _spawnCooldown = 2;
+      _spawnCooldown = 1;
     }
   }
 
