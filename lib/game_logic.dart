@@ -292,23 +292,10 @@ class GameLogic extends ChangeNotifier {
   }
 
   void _updateCat() {
-    if (!catActive) {
-      if (_rng.nextDouble() < 0.015) {
-        catActive = true;
-        catColumn = _rng.nextBool() ? 0 : 2;
-        // Try to hold a food item at peak in that column
-        for (final food in foodItems) {
-          if (food.column == catColumn && food.atPeak) {
-            food.applyCatHold();
-            break;
-          }
-        }
-      }
-    } else {
-      if (_rng.nextDouble() < 0.08) {
-        catActive = false;
-      }
-    }
+    // Disabled: The cat was a feature from the original 1981 Chef game that 
+    // appeared from the left/right walls to grab and hold food. 
+    // Since we've moved to a clean, straight-falling game, this is no longer needed.
+    catActive = false;
   }
 
   @override
