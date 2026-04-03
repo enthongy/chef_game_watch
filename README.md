@@ -11,6 +11,10 @@ Built entirely with pure Flutter frontend architecture, this project meticulousl
 
 ---
 
+**🕹️ Play the Web Demo:** [sonic-soccer-lcd.vercel.app](https://sonic-soccer-lcd.vercel.app/)
+
+---
+
 ## 📺 Preview
 
 > The game renders a 3D-styled plastic console shell with a beautiful backlit glossy sticker background, matching physical hardware styles!
