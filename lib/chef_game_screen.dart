@@ -216,23 +216,32 @@ class _LcdScreen extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(8),
       child: Consumer<GameLogic>(builder: (_, logic, __) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+        return Container(
           decoration: BoxDecoration(
-            color: logic.superSonicActive ? kLcdBgBoost : kLcdBg,
+            color: kLcdBg.withOpacity(0.6), // Fallback if image isn't loaded
+            image: const DecorationImage(
+              image: AssetImage('assets/bg.png'),
+              fit: BoxFit.cover,
+            ),
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: const Color(0xFF7A9474), width: 1),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              children: [
-                _ScoreRow(),
-                const SizedBox(height: 8),
-                _GameArea(),
-                const SizedBox(height: 8),
-                _MissRow(),
-              ],
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            color: logic.superSonicActive 
+                ? kLcdBgBoost.withOpacity(0.6) 
+                : Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                children: [
+                  _ScoreRow(),
+                  const SizedBox(height: 8),
+                  _GameArea(),
+                  const SizedBox(height: 8),
+                  _MissRow(),
+                ],
+              ),
             ),
           ),
         );
@@ -289,9 +298,49 @@ class _GameArea extends StatelessWidget {
       builder: (_, logic, __) => AspectRatio(
         aspectRatio: 1.6,
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            Positioned.fill(child: CustomPaint(painter: _GhostLayerPainter())),
-            Positioned.fill(child: CustomPaint(painter: _ActiveLayerPainter(logic: logic))),
+            // GHOST LAYER - BALLS
+            for (final pos in allBallGhostPositions)
+              Align(
+                alignment: Alignment(-0.75 + (pos.x * 0.5), -0.92 + (pos.y / 8 * 1.62)),
+                child: Image.asset('assets/ball.png', width: 22, height: 22, color: kLcdActive.withOpacity(0.05)),
+              ),
+            // GHOST LAYER - SONIC
+            for (int col = 0; col < 4; col++)
+              Align(
+                alignment: Alignment(-0.75 + (col * 0.5), 0.70),
+                child: Image.asset('assets/sonic.png', width: 34, height: 34, color: kLcdActive.withOpacity(0.05)),
+              ),
+
+            // ACTIVE LAYER - BALLS
+            for (final ball in logic.balls)
+              Align(
+                alignment: Alignment(-0.75 + (ball.column * 0.5), -0.92 + (ball.position.y / 8 * 1.62)),
+                child: Image.asset('assets/ball.png', width: 22, height: 22, color: kLcdActive.withOpacity(0.90)),
+              ),
+
+            // ACTIVE LAYER - SONIC
+            Align(
+              alignment: Alignment(-0.75 + (logic.sonicPosition * 0.5), 0.70),
+              child: Image.asset(
+                'assets/sonic.png', 
+                width: 34, 
+                height: 34,
+                color: logic.superSonicActive ? Colors.yellow : kLcdActive.withOpacity(0.90)
+              ),
+            ),
+
+            // ACTIVE LAYER - CAT (OBSTACLE)
+            if (logic.catActive)
+              Align(
+                alignment: Alignment(logic.catColumn == 0 ? -1.0 : 1.0, -0.76),
+                child: CustomPaint(
+                  size: const Size(20, 20),
+                  painter: _CatPainter(color: kLcdActive.withOpacity(0.90)),
+                ),
+              ),
+
             if (logic.phase == GamePhase.menu)
               Positioned.fill(child: _MenuOverlay()),
             if (logic.phase == GamePhase.gameOver)
@@ -303,178 +352,29 @@ class _GameArea extends StatelessWidget {
   }
 }
 
-// ═══════════════════════════════════════════════
-// GHOST LAYER
-// ═══════════════════════════════════════════════
-
-class _GhostLayerPainter extends CustomPainter {
+class _CatPainter extends CustomPainter {
+  final Color color;
+  _CatPainter({required this.color});
+  
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = kLcdActive.withOpacity(0.05)
-      ..style = PaintingStyle.fill;
-
-    for (final pos in allBallGhostPositions) {
-      _drawBall(canvas, _gridToCanvas(pos, size), paint);
-    }
-    for (int col = 0; col < 4; col++) {
-      _drawSonic(canvas, _sonicOffset(col, size), paint, false);
-    }
+    final fill = Paint()..color = color..style = PaintingStyle.fill;
+    final stroke = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.4..strokeCap = StrokeCap.round;
+    final center = Offset(size.width/2, size.height/2);
+    canvas.drawCircle(center, 9, fill);
+    final earPath = Path()
+      ..moveTo(center.dx - 6, center.dy - 8)..lineTo(center.dx - 10, center.dy - 16)..lineTo(center.dx - 2, center.dy - 10)..close();
+    canvas.drawPath(earPath, fill);
+    final earPath2 = Path()
+      ..moveTo(center.dx + 6, center.dy - 8)..lineTo(center.dx + 10, center.dy - 16)..lineTo(center.dx + 2, center.dy - 10)..close();
+    canvas.drawPath(earPath2, fill);
+    canvas.drawLine(center + const Offset(-9, 0), center + const Offset(-15, -2), stroke);
+    canvas.drawLine(center + const Offset(-9, 2), center + const Offset(-15, 4), stroke);
+    canvas.drawLine(center + const Offset(9, 0), center + const Offset(15, -2), stroke);
+    canvas.drawLine(center + const Offset(9, 2), center + const Offset(15, 4), stroke);
   }
-
   @override
-  bool shouldRepaint(covariant CustomPainter _) => false;
-}
-
-// ═══════════════════════════════════════════════
-// ACTIVE LAYER
-// ═══════════════════════════════════════════════
-
-class _ActiveLayerPainter extends CustomPainter {
-  final GameLogic logic;
-  const _ActiveLayerPainter({required this.logic});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = kLcdActive.withOpacity(0.90)
-      ..style = PaintingStyle.fill;
-
-    for (final ball in logic.balls) {
-      _drawBall(canvas, _gridToCanvas(ball.position, size), paint);
-    }
-
-    _drawSonic(canvas, _sonicOffset(logic.sonicPosition, size), paint,
-        logic.superSonicActive);
-
-    if (logic.catActive) {
-      final strokePaint = Paint()
-        ..color = kLcdActive.withOpacity(0.90)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..strokeCap = StrokeCap.round;
-      final catX = logic.catColumn == 0 ? -size.width * 0.04 : size.width * 1.04;
-      _drawCat(canvas, Offset(catX, size.height * 0.12), paint, strokePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ActiveLayerPainter old) =>
-      old.logic.balls != logic.balls ||
-      old.logic.sonicPosition != logic.sonicPosition ||
-      old.logic.catActive != logic.catActive ||
-      old.logic.superSonicActive != logic.superSonicActive;
-}
-
-// ─── Coordinate helpers ───────────────────────
-
-const double _kTopPct    = 0.04;
-const double _kBottomPct = 0.85;
-
-Offset _gridToCanvas(GridPos pos, Size size) {
-  final double cx = size.width * (pos.x * 2 + 1) / 8;
-  final double cy = size.height *
-      (_kTopPct + (pos.y / 8) * (_kBottomPct - _kTopPct));
-  return Offset(cx, cy);
-}
-
-Offset _sonicOffset(int col, Size size) => Offset(
-      size.width * (col * 2 + 1) / 8,
-      size.height * _kBottomPct,
-    );
-
-// ─── Soccer Ball sprite ───────────────────────
-
-void _drawBall(Canvas canvas, Offset center, Paint paint) {
-  // Outer circle
-  canvas.drawCircle(center, 8, paint);
-  // Hex pattern lines (simplified white pentagon lines over dark fill)
-  final linePaint = Paint()
-    ..color = (paint.color == kLcdActive.withOpacity(0.90))
-        ? const Color(0xFF94C89A) // contrast lines on active
-        : Colors.transparent
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.0;
-  // Draw 3 crossing lines to suggest a hex seam pattern
-  canvas.drawLine(center + const Offset(-4, -3), center + const Offset(4, -3), linePaint);
-  canvas.drawLine(center + const Offset(-5, 1), center + const Offset(0, 5), linePaint);
-  canvas.drawLine(center + const Offset(5, 1), center + const Offset(0, 5), linePaint);
-}
-
-// ─── Sonic sprite ─────────────────────────────
-
-void _drawSonic(Canvas canvas, Offset center, Paint basePaint, bool boosted) {
-  // Body (blue circle)
-  final bodyPaint = Paint()
-    ..color = boosted ? const Color(0xFF00E5FF) : basePaint.color
-    ..style = PaintingStyle.fill;
-  canvas.drawCircle(Offset(center.dx, center.dy - 4), 9, bodyPaint);
-
-  // Spikes (abstract triangles on top)
-  final spikePaint = Paint()
-    ..color = basePaint.color
-    ..style = PaintingStyle.fill;
-  final spikePath = Path()
-    ..moveTo(center.dx - 6, center.dy - 10)
-    ..lineTo(center.dx - 2, center.dy - 18)
-    ..lineTo(center.dx + 1, center.dy - 10)
-    ..close();
-  canvas.drawPath(spikePath, spikePaint);
-  final spikePath2 = Path()
-    ..moveTo(center.dx + 1, center.dy - 10)
-    ..lineTo(center.dx + 5, center.dy - 17)
-    ..lineTo(center.dx + 8, center.dy - 10)
-    ..close();
-  canvas.drawPath(spikePath2, spikePaint);
-
-  // Red feet
-  final feetPaint = Paint()
-    ..color = boosted ? Colors.yellowAccent : const Color(0xFFCC0000)
-    ..style = PaintingStyle.fill;
-  // Left foot
-  canvas.drawRRect(
-    RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(center.dx - 5, center.dy + 7), width: 8, height: 4),
-      const Radius.circular(2),
-    ),
-    feetPaint,
-  );
-  // Right foot
-  canvas.drawRRect(
-    RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(center.dx + 5, center.dy + 7), width: 8, height: 4),
-      const Radius.circular(2),
-    ),
-    feetPaint,
-  );
-
-  // White eye
-  canvas.drawCircle(Offset(center.dx + 3, center.dy - 5), 3,
-      Paint()..color = Colors.white.withOpacity(0.9));
-  canvas.drawCircle(Offset(center.dx + 4, center.dy - 5), 1.2,
-      Paint()..color = kLcdActive.withOpacity(0.9));
-}
-
-// ─── Cat sprite ───────────────────────────────
-
-void _drawCat(Canvas canvas, Offset center, Paint fill, Paint stroke) {
-  canvas.drawCircle(center, 9, fill);
-  final earPath = Path()
-    ..moveTo(center.dx - 6, center.dy - 8)
-    ..lineTo(center.dx - 10, center.dy - 16)
-    ..lineTo(center.dx - 2, center.dy - 10)
-    ..close();
-  canvas.drawPath(earPath, fill);
-  final earPath2 = Path()
-    ..moveTo(center.dx + 6, center.dy - 8)
-    ..lineTo(center.dx + 10, center.dy - 16)
-    ..lineTo(center.dx + 2, center.dy - 10)
-    ..close();
-  canvas.drawPath(earPath2, fill);
-  canvas.drawLine(center + const Offset(-9, 0), center + const Offset(-15, -2), stroke);
-  canvas.drawLine(center + const Offset(-9, 2), center + const Offset(-15, 4), stroke);
-  canvas.drawLine(center + const Offset(9, 0), center + const Offset(15, -2), stroke);
-  canvas.drawLine(center + const Offset(9, 2), center + const Offset(15, 4), stroke);
+  bool shouldRepaint(covariant _CatPainter old) => old.color != color;
 }
 
 // ═══════════════════════════════════════════════
