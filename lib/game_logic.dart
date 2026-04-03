@@ -98,9 +98,10 @@ class GameLogic extends ChangeNotifier {
   int get maxFoodItems => mode == GameMode.a ? 3 : 4;
 
   Duration get _tickDuration {
-    final int baseMs = mode == GameMode.a ? 200 : 140;
-    final int reduction = (score ~/ 10) * 4;
-    final int minMs = mode == GameMode.a ? 70 : 50;
+    // Slower base speed, softer reduction curve so it stays playable longer
+    final int baseMs = mode == GameMode.a ? 280 : 200;
+    final int reduction = (score ~/ 10) * 5;
+    final int minMs = mode == GameMode.a ? 110 : 80;
     return Duration(milliseconds: max(minMs, baseMs - reduction));
   }
 
@@ -116,9 +117,10 @@ class GameLogic extends ChangeNotifier {
     foodItems = [];
     
     int count = mode == GameMode.a ? 3 : 4;
+    int spacing = (17 ~/ count); // 17 path steps / items
     for (int i = 0; i < count; i++) {
         FoodItem f = FoodItem(_idCounter++, i % 4);
-        f.pathIndex = i * 4; 
+        f.pathIndex = i * spacing; 
         foodItems.add(f);
     }
     
