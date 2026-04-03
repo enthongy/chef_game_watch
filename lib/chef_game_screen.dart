@@ -9,14 +9,14 @@ import 'game_logic.dart';
 
 const Color kLcdBg = Color(0xFF94A88E);
 const Color kLcdActive = Color(0xFF0A0F08);
-const Color kShell = Color(0xFF1C2030);
-const Color kShellLight = Color(0xFF252B3E);
-const Color kShellShadow = Color(0xFF10131C);
-const Color kAccentGold = Color(0xFFB8941F);
-const Color kAccentGoldLight = Color(0xFFE8C84A);
-const Color kBtnBase = Color(0xFF242840);
-const Color kBtnLight = Color(0xFF3A3F60);
-const Color kBtnShadow = Color(0xFF0E1020);
+const Color kShell = Color(0xFF0A192F);
+const Color kShellLight = Color(0xFF1A2744);
+const Color kShellShadow = Color(0xFF050D1A);
+const Color kAccentGold = Color(0xFF7F8C8D);
+const Color kAccentGoldLight = Color(0xFFBDC3C7);
+const Color kBtnBase = Color(0xFF112240);
+const Color kBtnLight = Color(0xFF1E3A5F);
+const Color kBtnShadow = Color(0xFF050D1A);
 const Color kRedBtn = Color(0xFFB02030);
 
 // ═══════════════════════════════════════════════
@@ -100,11 +100,7 @@ class _GameDevice extends StatelessWidget {
     return Container(
       width: 340,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFD4AF37), Color(0xFFF9E076), Color(0xFFD4AF37)],
-        ),
+        color: kShell,
         borderRadius: BorderRadius.circular(36),
         boxShadow: [
           BoxShadow(
@@ -113,7 +109,7 @@ class _GameDevice extends StatelessWidget {
             offset: const Offset(0, 20),
           ),
           BoxShadow(
-            color: kShellLight.withOpacity(0.15),
+            color: kShellLight.withOpacity(0.20),
             blurRadius: 1,
             offset: const Offset(-1, -1),
           ),
@@ -159,7 +155,7 @@ class _BrandHeader extends StatelessWidget {
               ),
             ),
             Text(
-              'CHEF (GOLD)',
+              'CHEF',
               style: TextStyle(
                 color: Colors.white.withOpacity(0.9),
                 fontSize: 16,
@@ -207,11 +203,11 @@ class _LcdScreen extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFFD4AF37),
-            Color(0xFFF5E070),
-            Color(0xFFB8941F),
-            Color(0xFFE0C84A),
-            Color(0xFF9A7A10),
+            Color(0xFFBDC3C7),
+            Color(0xFFECF0F1),
+            Color(0xFF95A5A6),
+            Color(0xFFBDC3C7),
+            Color(0xFF2C3E50),
           ],
           stops: [0.0, 0.25, 0.5, 0.75, 1.0],
         ),
@@ -944,13 +940,24 @@ class NeumorphicButton extends StatefulWidget {
 
 class _NeumorphicButtonState extends State<NeumorphicButton> {
   bool _pressed = false;
+  DateTime? _lastTap;
+
+  void _handleTap() {
+    final now = DateTime.now();
+    if (_lastTap != null &&
+        now.difference(_lastTap!) < const Duration(milliseconds: 50)) {
+      return; // 50ms input buffer — drop ghost double-taps
+    }
+    _lastTap = now;
+    widget.onPressed?.call();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) {
         setState(() => _pressed = true);
-        widget.onPressed?.call();
+        _handleTap();
       },
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),

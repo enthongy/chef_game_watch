@@ -98,10 +98,11 @@ class GameLogic extends ChangeNotifier {
   int get maxFoodItems => mode == GameMode.a ? 3 : 4;
 
   Duration get _tickDuration {
-    // Slower base speed, softer reduction curve so it stays playable longer
-    final int baseMs = mode == GameMode.a ? 280 : 200;
-    final int reduction = (score ~/ 10) * 5;
-    final int minMs = mode == GameMode.a ? 110 : 80;
+    // Game A: 650ms base → floors at 250ms, drops 8ms per 10 pts
+    // Game B: 500ms base → floors at 250ms, drops 8ms per 10 pts
+    final int baseMs = mode == GameMode.a ? 650 : 500;
+    final int reduction = (score ~/ 10) * 8;
+    const int minMs = 250; // hard floor — never faster than this
     return Duration(milliseconds: max(minMs, baseMs - reduction));
   }
 
