@@ -31,6 +31,29 @@
 
   <title>game_watch_chef</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    window.playWebBeep = function(freq, durationMs) {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        if (!window.gameAudioCtx) {
+          window.gameAudioCtx = new AudioContext();
+        }
+        const ctx = window.gameAudioCtx;
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.05, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + durationMs / 1000);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + durationMs / 1000);
+      } catch (e) {}
+    };
+  </script>
 </head>
 <body>
   <!--
